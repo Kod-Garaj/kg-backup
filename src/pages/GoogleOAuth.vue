@@ -36,37 +36,25 @@
 </template>
 
 <script>
-import {
-  APP_PROTOCOL,
-  GOOGLE_DRIVE_API_KEY,
-  GOOGLE_DRIVE_CLIENT_ID,
-} from "../config";
+import { mapState } from "vuex";
+import { APP_PROTOCOL } from "../config";
 
 export default {
   name: "GoogleOAuth",
   data() {
     return {
-      apiBilgileri: {
-        API_KEY: GOOGLE_DRIVE_API_KEY,
-        CLIENT_ID: GOOGLE_DRIVE_CLIENT_ID,
-        DISCOVERY_DOCS: [
-          "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
-        ],
-        SCOPES: [
-          "https://www.googleapis.com/auth/drive.metadata.readonly",
-          "https://www.googleapis.com/auth/drive.file",
-        ],
-      },
       inited: {
         gapi: false,
         gis: false,
       },
       tokenClient: null,
-      gapi: window.gapi,
-      google: window.google,
-      shell: window.shell,
       yukleniyor: true,
     };
+  },
+  computed: {
+    ...mapState({
+      googleDrive: (state) => state.googleDrive,
+    }),
   },
   mounted() {
     this.gapiLoaded();
@@ -84,28 +72,27 @@ export default {
   },
   methods: {
     gapiLoaded() {
-      // this.gapi = window.gapi;
-      this.gapi.load("client", this.intializeGapiClient);
+      this.googleDrive.gapi.load("client", this.intializeGapiClient);
     },
     async intializeGapiClient() {
-      await this.gapi.client.init({
-        apiKey: this.apiBilgileri.API_KEY,
-        discoveryDocs: this.apiBilgileri.DISCOVERY_DOC,
+      await this.googleDrive.gapi.client.init({
+        apiKey: this.googleDrive.constants.API_KEY,
+        discoveryDocs: this.googleDrive.constants.DISCOVERY_DOC,
       });
       this.inited.gapi = true;
     },
     gisLoaded() {
-      // this.google = window.google;
-      this.tokenClient = window.google.accounts.oauth2.initTokenClient({
-        client_id: this.apiBilgileri.CLIENT_ID,
-        scope: this.apiBilgileri.SCOPES.join(" "),
-        callback: this.tokenInitCompleted,
-      });
+      this.tokenClient =
+        this.googleDrive.google.accounts.oauth2.initTokenClient({
+          client_id: this.googleDrive.constants.CLIENT_ID,
+          scope: this.googleDrive.constants.SCOPES.join(" "),
+          callback: this.tokenInitCompleted,
+        });
       this.inited.gis = true;
     },
     handleAuthClick() {
       console.log("Authorizing...");
-      if (this.gapi.client.getToken() === null) {
+      if (this.googleDrive.gapi.client.getToken() === null) {
         console.log("Authorizing with popup...", this.tokenClient);
         this.tokenClient.requestAccessToken({ prompt: "consent" });
       } else {
@@ -119,7 +106,7 @@ export default {
       }
       const url = `${APP_PROTOCOL}://${
         window.location.host
-      }/google-oauth-callback?obj=${JSON.stringify(resp)}`;
+      }/googleDriveOAuth?obj=${JSON.stringify(resp)}`;
 
       // const GoogleAuth = this.gapi.auth2.getAuthInstance();
       // console.log(GoogleAuth.currentUser.get());

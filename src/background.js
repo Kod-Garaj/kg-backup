@@ -74,14 +74,18 @@ if (!gotTheLock) {
     createWindow();
 
     ipcMain.on("klasor-sec", async (event) => {
-      const { filePaths, canceled } = await dialog.showOpenDialog(mainWindow, {
-        properties: ["openDirectory"],
-      });
+      const { filePaths, canceled, ...args } = await dialog.showOpenDialog(
+        mainWindow,
+        {
+          properties: ["openDirectory"],
+        }
+      );
 
       if (!canceled) {
-        const recursiveDosyalariTara = (filePath) => {
+        const recursiveDosyalariTara = (filePath, parents = []) => {
           const klasorBilgileri = [];
           fs.readdirSync(filePath).forEach((file) => {
+            parents = [...parents];
             const _filePath = path.join(filePath, file);
             const fileStat = fs.statSync(_filePath);
             const isDir = fileStat.isDirectory();
@@ -91,10 +95,12 @@ if (!gotTheLock) {
               fullname: file,
               path: filePath,
               pathWithName: _filePath,
+              parents: [...parents],
             };
 
             if (isDir) {
-              info.subFiles = recursiveDosyalariTara(_filePath);
+              parents.push(file);
+              info.subFiles = recursiveDosyalariTara(_filePath, parents);
             } else {
               const fileArr = file.split(".");
               const fileExt = fileArr[fileArr.length - 1];
@@ -112,7 +118,20 @@ if (!gotTheLock) {
           return klasorBilgileri;
         };
 
-        const klasorBilgileri = recursiveDosyalariTara(filePaths[0]);
+        const selectedPath = filePaths[0];
+        const name = path.basename(selectedPath);
+        const pathWithName = selectedPath;
+        const isDir = true;
+        const dirPath = path.dirname(selectedPath);
+        const subFiles = recursiveDosyalariTara(selectedPath, [name]);
+
+        const klasorBilgileri = {
+          name,
+          pathWithName,
+          isDir,
+          subFiles,
+          path: dirPath,
+        };
 
         return event.sender.send("klasor-sec:dosyalar", klasorBilgileri);
       }

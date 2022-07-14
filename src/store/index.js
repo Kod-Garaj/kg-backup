@@ -19,18 +19,15 @@ const store = new Vuex.Store({
         DISCOVERY_DOCS: [
           "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
         ],
-        SCOPES: [
-          "https://www.googleapis.com/auth/drive",
-          "https://www.googleapis.com/auth/drive.file",
-          "https://www.googleapis.com/auth/drive.metadata.readonly",
-        ],
+        SCOPES: ["https://www.googleapis.com/auth/drive"],
       },
       gapi: null,
       gapiInited: false,
       google: null,
       gisInited: false,
-      user: storage.getKey("googleDriveUser") || null,
-      token: storage.getKey("googleDriveToken") || null,
+      user: null,
+      token: null,
+      initLoading: false,
     },
   },
   mutations: {
@@ -46,6 +43,7 @@ const store = new Vuex.Store({
     },
     setGoogleDriveToken(state, token) {
       state.googleDrive.token = token;
+      state.googleDrive.gapi.client.setToken(token);
       if (token === null) {
         return storage.removeKey("googleDriveToken");
       }
@@ -65,10 +63,13 @@ const store = new Vuex.Store({
     setGisInited(state, gisInited) {
       state.googleDrive.gisInited = gisInited;
     },
+    setGoogleDriveLoading(state, loading) {
+      state.googleDrive.initLoading = loading;
+    },
   },
   actions: {
     setGoogleAuthToken({ commit, state }, payload) {
-      state.googleDrive.gapi.client.setToken(payload);
+      payload = payload || state.googleDrive.token;
       commit("setGoogleDriveToken", payload);
       return new Promise((resolve) => {
         const request = state.googleDrive.gapi.client.request({
@@ -84,10 +85,11 @@ const store = new Vuex.Store({
       });
     },
     logoutGoogleDrive({ commit, state }) {
-      state.googleDrive.gapi.client.setToken(null);
       state.googleDrive.google.accounts.oauth2.revoke(
         state.googleDrive.token.access_token
       );
+      state.googleDrive.gapi.client.setToken(null);
+      console.log("logoutGoogleDrive", storage);
       commit("setGoogleDriveUser", null);
       commit("setGoogleDriveToken", null);
     },

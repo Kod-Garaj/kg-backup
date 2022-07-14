@@ -10,6 +10,7 @@
 
 <script>
 import { mapMutations, mapState } from "vuex";
+import { storage } from "./utils";
 
 export default {
   name: "App",
@@ -34,14 +35,29 @@ export default {
       "setGoogle",
       "setGapiInited",
       "setGisInited",
+      "setGoogleDriveLoading",
+      "setGoogleDriveUser",
+      "setGoogleDriveToken",
     ]),
 
     async googleDriveInit() {
+      this.setGoogleDriveLoading(true);
       this.setGapi(window.gapi);
       this.setGoogle(window.google);
 
       await this.gapiLoaded();
       await this.gisLoaded();
+
+      const user = storage.getKey("googleDriveUser");
+      if (user) {
+        this.setGoogleDriveUser(user);
+      }
+
+      const token = storage.getKey("googleDriveToken");
+      if (token) {
+        this.setGoogleDriveToken(token);
+      }
+      this.setGoogleDriveLoading(false);
     },
     gapiLoaded() {
       return new Promise((resolve) => {
@@ -58,6 +74,7 @@ export default {
     },
     async gisLoaded() {
       return new Promise((resolve) => {
+        console.log("GIS Loaded...", this.googleDrive.constants.SCOPES);
         this.googleDrive.google.accounts.oauth2.initTokenClient({
           client_id: this.googleDrive.constants.CLIENT_ID,
           scope: this.googleDrive.constants.SCOPES.join(" "),
